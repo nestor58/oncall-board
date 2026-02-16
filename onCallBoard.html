@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0b10" />
+  <title>OnCallBoard2 - On-Call Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           hsl(228, 14%, 5%);
+      --bg-subtle:    hsl(228, 12%, 7%);
+      --fg:           hsl(0, 0%, 95%);
+      --fg-dim:       hsl(0, 0%, 72%);
+      --card:         hsl(228, 12%, 8%);
+      --card-hover:   hsl(228, 12%, 10%);
+      --primary:      hsl(187, 80%, 48%);
+      --primary-soft: hsla(187, 80%, 48%, 0.12);
+      --secondary:    hsl(228, 10%, 13%);
+      --muted-fg:     hsl(0, 0%, 48%);
+      --accent:       hsl(142, 70%, 45%);
+      --accent-soft:  hsla(142, 70%, 45%, 0.12);
+      --destructive:  hsl(0, 72%, 55%);
+      --destructive-soft: hsla(0, 72%, 55%, 0.12);
+      --warning:      hsl(38, 92%, 50%);
+      --warning-soft: hsla(38, 92%, 50%, 0.12);
+      --border:       hsl(228, 10%, 14%);
+      --border-light: hsl(228, 10%, 18%);
+      --radius:       0.875rem;
+      --radius-sm:    0.5rem;
+      --font-sans:    'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      overflow: auto;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ── Layout ────────────────────────────────────────────── */
+    .dashboard {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ── Header ────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-subtle);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .header-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 3.25rem;
+      height: 3.25rem;
+      border-radius: var(--radius);
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .header-icon svg { width: 1.5rem; height: 1.5rem; }
+    .header-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--fg);
+    }
+    .header-subtitle {
+      font-size: 0.8125rem;
+      font-family: var(--font-mono);
+      color: var(--muted-fg);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-top: 0;
+    }
+
+    /* Clock */
+    .clock { text-align: right; }
+    .clock-time {
+      display: block;
+      font-size: 2.5rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--fg);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .clock-date {
+      display: block;
+      font-size: 0.8125rem;
+      font-family: var(--font-mono);
+      color: var(--muted-fg);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 0.375rem;
+    }
+
+    /* ── Summary Bar ───────────────────────────────────────── */
+    .summary-bar {
+      display: flex;
+      align-items: center;
+      gap: 2.5rem;
+      padding: 0.1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: hsla(228, 10%, 13%, 0.3);
+      display: none;
+    }
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .stat-icon-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+    }
+    .stat-icon-wrap svg { width: 1.125rem; height: 1.125rem; }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--muted-fg);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .stat-info { display: flex; align-items: baseline; gap: 0.5rem; }
+
+    /* Live indicator */
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+    .live-dot {
+      position: relative;
+      width: 0.5rem;
+      height: 0.5rem;
+    }
+    .live-dot::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    .live-dot::after {
+      content: '';
+      position: relative;
+      display: block;
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .live-text {
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    /* ── Department Grid ───────────────────────────────────── */
+    .grid-area {
+      flex: 1;
+      overflow: auto;
+      padding: 0.8rem 0.8rem;
+    }
+    .grid-area::-webkit-scrollbar { width: 6px; }
+    .grid-area::-webkit-scrollbar-track { background: transparent; }
+    .grid-area::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    @media (max-width: 1600px) {
+      .dept-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 1100px) {
+      .dept-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .dept-grid { grid-template-columns: 1fr; }
+      .header { padding: 1rem; }
+      .summary-bar { gap: 1.25rem; padding: 0.75rem 1rem; flex-wrap: wrap; }
+      .grid-area { padding: 0.75rem; }
+    }
+
+    /* ── Department Card ───────────────────────────────────── */
+    .dept-card {
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--card);
+      padding: 0.25rem;
+      transition: background 0.2s ease;
+    }
+    .dept-card:hover { background: var(--card-hover); }
+    .dept-card.card-alert  { border-color: hsla(0, 72%, 55%, 0.35); }
+    .dept-card.card-warning { border-color: hsla(38, 92%, 50%, 0.35); }
+
+    .dept-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.1rem;
+    }
+    .dept-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+    .dept-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: var(--radius-sm);
+      background: var(--secondary);
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+    .dept-icon svg { width: 1.25rem; height: 1.25rem; }
+    .dept-name {
+      font-size: 1.125rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--fg);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Status Badge ──────────────────────────────────────── */
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.625rem;
+      border-radius: 9999px;
+      flex-shrink: 0;
+    }
+    .status-dot {
+      position: relative;
+      width: 0.5rem;
+      height: 0.5rem;
+    }
+    .status-dot::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    .status-dot::after {
+      content: '';
+      position: relative;
+      display: block;
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+    }
+    .status-label {
+      font-size: 0.6875rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Status color variants */
+    .status-normal {
+      background: var(--accent-soft);
+    }
+    .status-normal .status-dot::before,
+    .status-normal .status-dot::after { background: var(--accent); }
+    .status-normal .status-label { color: var(--accent); }
+
+    .status-warning {
+      background: var(--warning-soft);
+    }
+    .status-warning .status-dot::before,
+    .status-warning .status-dot::after { background: var(--warning); }
+    .status-warning .status-label { color: var(--warning); }
+
+    .status-alert {
+      background: var(--destructive-soft);
+    }
+    .status-alert .status-dot::before,
+    .status-alert .status-dot::after { background: var(--destructive); }
+    .status-alert .status-label { color: var(--destructive); }
+
+    /* ── Personnel Card ────────────────────────────────────── */
+    .personnel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .person {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: hsla(228, 10%, 13%, 0.5);
+      padding: 0.5rem 0.75rem;
+    }
+    .person.is-primary {
+      border-color: hsla(187, 80%, 48%, 0.25);
+      background: hsla(187, 80%, 48%, 0.04);
+    }
+    .person-avatar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background: var(--secondary);
+      color: var(--muted-fg);
+      flex-shrink: 0;
+    }
+    .person.is-primary .person-avatar {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .person-avatar svg { width: 1.125rem; height: 1.125rem; }
+
+    .person-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-width: 0;
+      flex: 1;
+    }
+    .person-name-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .person-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--fg);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .person-badge {
+      display: inline-block;
+      border-radius: 0.25rem;
+      background: var(--primary-soft);
+      padding: 0.0625rem 0.4375rem;
+      font-size: 0.625rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+    .person-role {
+      font-size: 0.75rem;
+      color: var(--muted-fg);
+    }
+    .person-contact {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.05rem;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    .person-phone {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 1.1rem;
+      font-family: var(--font-mono);
+      color: var(--fg-dim);
+    }
+    .person-phone svg { width: 0.75rem; height: 0.75rem; }
+    .person-since {
+      font-size: 0.625rem;
+      font-family: var(--font-mono);
+      color: var(--muted-fg);
+    }
+
+    /* ── Footer ────────────────────────────────────────────── */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.625rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg-subtle);
+    }
+    .footer-text {
+      font-size: 0.6875rem;
+      font-family: var(--font-mono);
+      color: var(--muted-fg);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Keyframes ─────────────────────────────────────────── */
+    @keyframes ping {
+      75%, 100% {
+        transform: scale(2.2);
+        opacity: 0;
+      }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .dept-card {
+      animation: fadeIn 0.4s ease both;
+    }
+    .dept-card:nth-child(1)  { animation-delay: 0.03s; }
+    .dept-card:nth-child(2)  { animation-delay: 0.06s; }
+    .dept-card:nth-child(3)  { animation-delay: 0.09s; }
+    .dept-card:nth-child(4)  { animation-delay: 0.12s; }
+    .dept-card:nth-child(5)  { animation-delay: 0.15s; }
+    .dept-card:nth-child(6)  { animation-delay: 0.18s; }
+    .dept-card:nth-child(7)  { animation-delay: 0.21s; }
+    .dept-card:nth-child(8)  { animation-delay: 0.24s; }
+  </style>
+</head>
+<body>
+  <main class="dashboard">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="header-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+        </div>
+        <div>
+          <h1 class="header-title">OnCallBoard</h1>
+          <p class="header-subtitle">Operations Command Center</p>
+        </div>
+      </div>
+      <div class="clock">
+        <span class="clock-time" id="clock-time">--:--:--</span>
+        <span class="clock-date" id="clock-date">Loading...</span>
+      </div>
+    </header>
+
+    <!-- Summary Bar -->
+    <div class="summary-bar">
+      <div class="stat">
+        <div class="stat-icon-wrap" style="background:var(--primary-soft); color:var(--primary)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" style="color:var(--primary)" id="stat-depts">0</span>
+          <span class="stat-label">Departments</span>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-icon-wrap" style="background:var(--secondary); color:var(--fg)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" style="color:var(--fg)" id="stat-personnel">0</span>
+          <span class="stat-label">On-Call</span>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-icon-wrap" style="background:var(--accent-soft); color:var(--accent)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" style="color:var(--accent)" id="stat-operational">0</span>
+          <span class="stat-label">Operational</span>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-icon-wrap" id="incidents-icon-wrap" style="background:var(--destructive-soft); color:var(--destructive)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="stat-incidents" style="color:var(--destructive)">0</span>
+          <span class="stat-label">Incidents</span>
+        </div>
+      </div>
+      <div class="live-indicator">
+        <span class="live-dot"></span>
+        <span class="live-text">Live</span>
+      </div>
+    </div>
+
+    <!-- Department Grid -->
+    <div class="grid-area">
+      <div class="dept-grid" id="dept-grid"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer"></footer>
+
+  </main>
+
+  <script>
+    // ── SVG Icon Library ────────────────────────────────────
+    var icons = {
+      server:     '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>',
+      shield:     '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>',
+      database:   '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>',
+      cloud:      '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>',
+      headphones: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>',
+      network:    '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>',
+      code:       '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>',
+      zap:        '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>',
+      user:       '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+      phone:      '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.88.37 1.75.7 2.58a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.83.33 1.7.57 2.58.7A2 2 0 0 1 22 16.92z"/></svg>',
+    };
+
+    var statusLabels = { normal: "Operational", warning: "Degraded", alert: "Incident" };
+
+    // ── Department Data ──────────────────────────────────────
+    var departments = [
+      {
+        name: "Spacecraft Engineer RCM",
+        icon: "server",
+        status: "normal",
+        personnel: [
+          { name: "Abhishek Trivedi",    role: "RCM Lead", pager:"514 230-5889", phone: "647-772-8352",  desk: "450-926-5135", since: "08:00",  isPrimary: true },
+          { name: "Pundeep Hundal",   role: "RCM Shadow",      pager:"NONE", phone: "780-200-8791",  desk: "NONE", since: "08:00", isPrimary: false }
+        ],
+      },
+      {
+        name: "Spacecraft Engineer MM",
+        icon: "server",
+        status: "normal",
+        personnel: [
+          { name: "Tyler Hrynyk",   role: "Neossat",              phone: "555-201-4420", since: "08:00", isPrimary: true },
+          { name: "Maude Bettez",   role: "Scisat, Neossat",      phone: "514-304-7558", since: "08:00", isPrimary: true  },
+        ],
+      },
+      {
+        name: "Operations Conductor",
+        icon: "shield",
+        status: "alert",
+        personnel: [
+          { name: "Maxime Fortin", role: "OC",  phone: "438-886-6977", desk: "450-926-5135", since: "06:00", isPrimary: true },
+          { name: "CDPF",       role: "CDPF",           phone: "+1 (555) 403-5590", since: "12:00", isPrimary: true },
+        ],
+      },
+      {
+        name: "IT",
+        icon: "cloud",
+        status: "warning",
+        personnel: [
+          { name: "David Okafor",  role: "GSA",        phone: "+1 (555) 504-7730", since: "10:00", isPrimary: true },
+          { name: "Emily Larson",  role: "OSE (RCM)",  phone: "+1 (555) 504-7731", since: "10:00", isPrimary: false },
+        ],
+      },
+      {
+        name: "OHS",
+        icon: "headphones",
+        status: "normal",
+        personnel: [
+          { name: "Mia Johansson", role: "Admin (RCM)",       phone: "+1 (555) 605-2240", since: "09:00", isPrimary: true },
+          { name: "Thomas Grant",  role: "CSA Operator (RCM)",    phone: "+1 (555) 605-2241", since: "09:00", isPrimary: false },
+        ],
+      },
+      {
+        name: "OMT",
+        icon: "network",
+        status: "normal",
+        personnel: [
+          { name: "Carlos Mendes", role: "SHUB",   phone: "+1 (555) 706-3350", since: "07:00", isPrimary: true },
+          { name: "Aisha Bello",   role: "SASK",        phone: "+1 (555) 706-3351", since: "07:00", isPrimary: false },
+        ],
+      },
+      
+      {
+        name: "FDA",
+        icon: "zap",
+        status: "normal",
+        personnel: [
+          { name: "Jordan Blake",   role: "R2 COLA",                    phone: "+1 (555) 908-5570", since: "00:00", isPrimary: true },
+          { name: "Tanya Ivanova",  role: "RCM COLA & Launchpad-- [FD: 6-5817]",       phone: "+1 (555) 908-5571", since: "00:00", isPrimary: true },
+          { name: "Jordan Blake",   role: "CSA COLA Scicat / Neossat",  phone: "+1 (555) 908-5570", since: "00:00", isPrimary: true },
+          { name: "Tanya Ivanova",  role: "S1/N1/R2",                   phone: "+1 (555) 908-5571", since: "00:00", isPrimary: true }
+        ],
+      },
+      {
+        name: "Representative",
+        icon: "zap",
+        status: "normal",
+        personnel: [
+          { name: "Jordan Blake",   role: "CSA Representative",    phone: "+1 (555) 908-5570", since: "00:00" },
+          { name: "Tanya Ivanova",  role: "MDA COMSEC (R2)",  phone: "+1 (555) 908-5571", since: "00:00", isPrimary: false },
+          { name: "Jordan Blake",   role: "CSA COMSEC (RCM)",    phone: "+1 (555) 908-5570", since: "00:00", isPrimary: true },
+          { name: "Tanya Ivanova",  role: "CryptoNet ConAuth (RCM)", phone: "+1 (555) 908-5571", since: "00:00", isPrimary: false }
+        ],
+      },
+      {
+        name: "Mission Planning",
+        icon: "zap",
+        status: "normal",
+        personnel: [
+          { name: "Jordan Blake",   role: "RADARSAT 2",    phone: "+1 (555) 908-5570", since: "00:00" },
+          { name: "Tanya Ivanova",  role: "RCM",  phone: "+1 (555) 908-5571", since: "00:00", isPrimary: false },
+          { name: "Philippe Rolland",  role: "MOM RCM",     phone: "514-823-3155", since: "11:00"},
+          { name: "Philippe Rolland",  role: "MOM R2",       phone: "514-823-3155", since: "11:00"},
+        ],
+      },
+    ];
+
+    // ── Summary Stats ───────────────────────────────────────
+    function updateStats() {
+      var total = departments.length;
+      var personnel = 0;
+      var operational = 0;
+      var incidents = 0;
+      for (var i = 0; i < departments.length; i++) {
+        personnel += departments[i].personnel.length;
+        if (departments[i].status === "normal") operational++;
+        if (departments[i].status === "alert") incidents++;
+      }
+      document.getElementById("stat-depts").textContent = total;
+      //document.getElementById("stat-personnel").textContent = personnel;
+      document.getElementById("stat-operational").textContent = operational;
+      document.getElementById("stat-incidents").textContent = incidents;
+
+      var incidentColor = incidents > 0 ? "var(--destructive)" : "var(--muted-fg)";
+      var incidentBg    = incidents > 0 ? "var(--destructive-soft)" : "var(--secondary)";
+      document.getElementById("stat-incidents").style.color = incidentColor;
+      document.getElementById("incidents-icon-wrap").style.color = incidentColor;
+      document.getElementById("incidents-icon-wrap").style.background = incidentBg;
+    }
+
+    // ── Clock ───────────────────────────────────────────────
+    function updateClock() {
+      var now = new Date();
+      document.getElementById("clock-time").textContent = now.toLocaleTimeString("en-US", {
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+      });
+      document.getElementById("clock-date").textContent = now.toLocaleDateString("en-US", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+      });
+    }
+
+    // ── Render ──────────────────────────────────────────────
+    function renderPerson(p) {
+      var cls = p.isPrimary ? "person is-primary" : "person";
+      var badge = p.isPrimary ? '<span class="person-badge"></span>' : "";
+      return (
+        '<div class="' + cls + '">' +
+          '<div class="person-avatar">' + icons.user + '</div>' +
+          '<div class="person-info">' +
+            '<div class="person-name-row">' +
+              '<span class="person-name">' + p.name + '</span>' + badge +
+            '</div>' +
+            '<span class="person-role">' + p.role + '</span>' +
+          '</div>' +
+          '<div class="person-contact">' +
+            '<div class="person-phone">' + icons.phone + '<span><strong>Pager:</strong> ' + p.pager + '</span></div>' +
+            '<div class="person-phone">' + icons.phone + '<span><strong>Cell:</strong> ' + p.phone + '</span></div>' +
+            '<div class="person-phone">' + icons.phone + '<span><strong>Desk:</strong> ' + p.desk + '</span></div>' +
+            //'<span class="person-since">Since ' + p.since + '</span>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    function renderDepartment(dept) {
+      var cardClass = "dept-card";
+      if (dept.status === "alert")   cardClass += " card-alert";
+      if (dept.status === "warning") cardClass += " card-warning";
+
+      var personnelHTML = "";
+      for (var i = 0; i < dept.personnel.length; i++) {
+        personnelHTML += renderPerson(dept.personnel[i]);
+      }
+
+      return (
+        '<div class="' + cardClass + '">' +
+          '<div class="dept-header">' +
+            '<div class="dept-header-left">' +
+              '<div class="dept-icon">' + icons[dept.icon] + '</div>' +
+              '<h2 class="dept-name">' + dept.name + '</h2>' +
+            '</div>' +
+            '<div class="status-badge status-' + dept.status + '">' +
+              '<span class="status-dot"></span>' +
+              '<span class="status-label">' + statusLabels[dept.status] + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="personnel-list">' + personnelHTML + '</div>' +
+        '</div>'
+      );
+    }
+
+    function renderGrid() {
+      var html = "";
+      for (var i = 0; i < departments.length; i++) {
+        html += renderDepartment(departments[i]);
+      }
+      document.getElementById("dept-grid").innerHTML = html;
+    }
+
+    // ── Init ────────────────────────────────────────────────
+    updateClock();
+    setInterval(updateClock, 1000);
+    updateStats();
+    renderGrid();
+  </script>
+</body>
+</html>
